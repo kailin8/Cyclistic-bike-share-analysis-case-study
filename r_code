@@ -1,0 +1,298 @@
+# Importing library
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(readr)
+library(tibble)
+
+
+# Importing datasets
+data_202110 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202110-divvy-tripdata.csv")
+data_202111 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202111-divvy-tripdata.csv")
+data_202112 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202112-divvy-tripdata.csv")
+data_202201 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202201-divvy-tripdata.csv")
+data_202202 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202202-divvy-tripdata.csv")
+data_202203 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202203-divvy-tripdata.csv")
+data_202204 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202204-divvy-tripdata.csv")
+data_202205 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202205-divvy-tripdata.csv")
+data_202206 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202206-divvy-tripdata.csv")
+data_202207 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202207-divvy-tripdata.csv")
+data_202208 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202208-divvy-tripdata.csv")
+data_202209 <- read.csv("C:/Users/USER/Documents/cyclistic/divvy-tripdata/202209-divvy-publictripdata.csv")
+
+
+# Preview datasets step by step
+glimpse(data_202110)
+colnames(data_202110)
+head(data_202110)
+
+glimpse(data_202111)
+colnames(data_202111)
+head(data_202111)
+
+glimpse(data_202112)
+colnames(data_202112)
+head(data_202112)
+
+glimpse(data_202201)
+colnames(data_202201)
+head(data_202201)
+
+glimpse(data_202202)
+colnames(data_202202)
+head(data_202202)
+
+glimpse(data_202203)
+colnames(data_202203)
+head(data_202203)
+
+glimpse(data_202204)
+colnames(data_202204)
+head(data_202204)
+
+glimpse(data_202205)
+colnames(data_202205)
+head(data_202205)
+
+glimpse(data_202206)
+colnames(data_202206)
+head(data_202206)
+
+glimpse(data_202207)
+colnames(data_202207)
+head(data_202207)
+
+glimpse(data_202208)
+colnames(data_202208)
+head(data_202208)
+
+glimpse(data_202209)
+colnames(data_202209)
+head(data_202209)
+
+
+# Merged data 
+all_data <- rbind(data_202110, data_202111, data_202112, data_202201, data_202202, data_202203, data_202204, data_202205, data_202206, data_202207, data_202208, data_202209)
+as_tibble(all_data)
+
+# Inspect the new table that has been created
+colnames(all_data)  # List of column names
+nrow(all_data)  # How many rows are in data frame?
+dim(all_data)  # Dimensions of the data frame?
+head(all_data)  # See the first 6 rows of data frame.  
+str(all_data)  # See list of columns and data types 
+summary(all_data)  # Statistical summary of data. Mainly for numerics
+
+
+# add ride data for each month, day, or year
+# The default format is yyyy-mm-dd in Date type
+all_data$date <- as.Date(all_data$started_at) 
+class(all_data$date)
+
+# add "month" colnum in factor type
+all_data$month <- factor(month(as.Date(all_data$date)), levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+class(all_data$month)
+
+# add "month_num" colnum in numeric type
+all_data$month_num <- as.numeric(month(as.Date(all_data$date)))
+class(all_data$month_num)
+
+# add "day_of_week" colnum in factor type
+all_data$day_of_week <- factor(wday(as.Date(all_data$date), week_start=1))
+class(all_data$day_of_week)
+
+# let "day_of_week" show in english
+Sys.setlocale("LC_TIME", "English")
+
+# add "day_of_week_name" colnum in factor type
+all_data$day_of_week_name <- factor(weekdays(all_data$date), levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"), ordered = TRUE) 
+class(all_data$day_of_week_name)
+
+# add "season" colnum in character type
+# month in December, January, February are winter
+# months in March, April, May are spring 
+# months in June, July, August are summer 
+# months in September, October, November are autumn 
+all_data$season <- "winter"
+all_data$season[all_data$month_num > 2 & all_data$month_num < 6] <- "spring"
+all_data$season[all_data$month_num > 5 & all_data$month_num < 9] <- "summer"
+all_data$season[all_data$month_num > 8 & all_data$month_num < 12] <- "autumn"
+all_data$season <- factor(all_data$season, levels = c("spring", "summer", "autumn", "winter"))
+
+head(all_data)
+
+
+# Calculate the length of each ride by subtracting the "started_at" column from the "ended_at" column
+all_data <- mutate(all_data, ride_length = difftime(all_data$ended_at, all_data$started_at))
+
+# Convert "ride_length" from factor to numeric
+all_data$ride_length <- all_data$ride_length %>% as.character() %>% as.numeric()
+
+head(all_data)
+
+
+# Remove bad data, when ride_length was negative
+nrow(all_data)
+new_data <- all_data[!(all_data$ride_length < 0),]
+nrow(all_data)
+
+# Select useful data and remove lat, long, station name and daytimes
+new_data <- new_data %>% select(member_casual, date, month, season, day_of_week_name, day_of_week, rideable_type,  ride_length) %>% drop_na() %>% arrange(member_casual, month)
+
+head(new_data)
+as_tibble(new_data)
+
+
+# Summarise a desired data
+summ_data <- new_data %>% group_by(member_casual, season, month, day_of_week, day_of_week_name, rideable_type) %>% summarise(avg_len = mean(ride_length), num_of_ride = n()) 
+head(summ_data)
+
+# Scatter chart with trend line
+# Finding: They are not related
+ggplot(summ_data, aes(avg_len, num_of_ride, colour = member_casual)) + geom_point() +geom_smooth(method=loess, color="white", size=0.5) + labs (title = "Average of ride length vs Using times", x = "Average of ride length(sec)", y ="Using times")
+
+
+# Descriptive analysis on ride_length (all figures in seconds)
+# Finding: Value is too big and try average of ride length
+summary(new_data$ride_length)
+
+# Compare on summary of ride_length and using times
+# Finding: Ride length: member > cuasual, Using time: member > casual, and range of casual is big
+summ_user <- new_data %>% group_by(member_casual) %>% summarise(avg_len = mean(ride_length), med_len = median(ride_length), max_len = max(ride_length), min_len = min(ride_length), num_of_ride = n())
+
+head(summ_user)
+
+
+# 1) Understanding day of ride length
+# Using day for average ride length 
+# Finding: Member & Casual: weekday > holiday, casual has big difference 
+user_day_len <- new_data %>% group_by(day_of_week_name, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_day_len)
+
+# plot
+ggplot(user_day_len, aes(day_of_week_name, avg_len, fill = member_casual)) + geom_col() + labs (title = "Average of Ride Length on Each Day", x = "day", y ="Average of ride length(sec)") + theme(legend.position="bottom")  
+
+
+# 2) Understanding rideable type of ride length
+# Using rideable type for average ride length 
+# Finding: Member: classic > electric > docked, Casual: docked > classic > electric
+user_typ_len <- new_data %>% group_by(rideable_type, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_typ_len)
+
+# plot
+ggplot(user_typ_len, aes(rideable_type, avg_len, fill = member_casual)) + geom_col() + labs (title = "Average of Ride Length in Rideable Types", x = "Rideable Type", y ="Average of ride length(sec)")+ theme(legend.position="bottom")  
+
+
+# 3) Understanding season of ride length
+# Using season for average ride length 
+# Finding: Member & Casual: summer > spring > autumn > winter
+user_sea_len <- new_data %>% group_by(season, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_sea_len)
+
+# plot
+ggplot(user_sea_len, aes(season, avg_len, fill = member_casual)) + geom_col() + labs (title = "Average of Ride Length in Four Seasons", x = "Season", y ="Average of ride length(sec)")+ theme(legend.position="bottom")  
+
+
+# 4) Understanding month of ride length
+# Using month for average ride length 
+# Finding: Member & Casual: longest in June, shortest in December 
+user_mon_len <- new_data %>% group_by(month, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_mon_len)
+
+# plot
+ggplot(user_mon_len, aes(month, avg_len, fill = member_casual)) + geom_col() + labs (title = "Average of Ride Length in Twelve Months", x = "Month", y ="Average of ride length(sec)") + theme(legend.position="bottom")  
+
+
+# 5) Consolidated analysis
+  # Using rideable type, day and separate season for ride length 
+  # Finding: Casual: Pattern in dock is difference in four seasons
+user_day_typ_sea_len <- new_data %>% group_by(day_of_week, rideable_type, season, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_day_typ_sea_len)
+
+  # plot
+ggplot(user_day_typ_sea_len) + geom_col(aes(day_of_week, avg_len, fill = member_casual)) + facet_grid(~rideable_type~season) + labs (title = "Average of Ride Length on Each Day and in Rideable Types and Four Seasons", x = "day", y ="Average of ride length(sec)") + theme(legend.position="bottom", axis.ticks = element_blank(), axis.text.y = element_blank()) 
+
+
+  # Using rideable type, day and separate month for ride length 
+  # Finding: Casual: Ride length of dock is the longest in January 
+user_day_typ_mon_len <- new_data %>% group_by(day_of_week, rideable_type, month, member_casual) %>% summarise(avg_len = mean(ride_length))
+
+head(user_day_typ_mon_len)
+
+  # plot
+ggplot(user_day_typ_mon_len) + geom_col(aes(day_of_week, avg_len, fill = member_casual)) + facet_grid(~rideable_type~month) + labs (title = "Average of Ride Length on Each Day and in Rideable Types and Twelve Months", x = "day", y ="Average of ride length(sec)") + theme(legend.position="bottom", axis.ticks = element_blank(), axis.text.y = element_blank())
+
+
+# 1) Understanding day of using times
+# Using day for using times 
+# Finding:Member: weekday > holiday, Casual: weekday < holiday
+user_day_num <- new_data %>% group_by(day_of_week_name, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_day_num)
+
+# plot
+ggplot(user_day_num) + geom_col(aes(day_of_week_name, num_of_ride, fill = member_casual)) + labs (title = "Using Times on Each Day", x = "day", y ="Using times") + theme(legend.position="bottom")
+
+
+# 2) Understanding rideable type of using times
+# Using rideable type for using times 
+# Finding: Member: classic > electric >docked, Casual: electric > classic > docked
+user_typ_num <- new_data %>% group_by(rideable_type, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_typ_num)
+
+# plot
+ggplot(user_typ_num) + geom_col(aes(rideable_type, num_of_ride, fill = member_casual)) + labs (title = "Using Times in Rideable Types", x = "Rideable Type", y ="Using times") + theme(legend.position="bottom")
+
+
+# 3) Understanding season of using times
+# Using season for using times 
+# Finding: Member & Casual: summer > autumn > spring > winter 
+user_sea_num <- new_data %>% group_by(season, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_sea_num)
+
+# plot
+ggplot(user_sea_num) + geom_col(aes(season, num_of_ride, fill = member_casual)) + labs (title = "Using Times in Four Seasons", x = "Season", y ="Using times") + theme(legend.position="bottom")
+
+
+# 4) Understanding month of using times
+# Using month for using times 
+# Finding: Same pattern, Member: most in August, Casual: most in July
+user_mon_num <- new_data %>% group_by(month, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_mon_num)
+
+# plot
+ggplot(user_mon_num) + geom_col(aes(month, num_of_ride, fill = member_casual)) + labs (title = "Using Times in Twelve Months", x = "Month", y ="Using times") + theme(legend.position="bottom")
+
+
+# 5) Consolidated analysis
+  # Using rideable type, day and separate season for using times
+  # Finding: Casual: in winter, most on Wednesday and Thursday  
+user_day_typ_sea_num <- new_data %>% group_by(day_of_week, rideable_type, season, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_day_typ_sea_num)
+
+  # plot
+ggplot(user_day_typ_sea_num) + geom_col(aes(day_of_week, num_of_ride, fill = member_casual)) + facet_grid(~rideable_type~season) + labs (title = "Using Times on Each Day and in Rideable Types and Four Seasons", x = "day", y ="Using times") + theme(legend.position="bottom")
+
+
+  # Using rideable type, day and separate month for using times
+  # Finding: Same pattern, Member: class most in June, elect most in September, Casual: all type most in July   
+user_day_typ_mon_num <- new_data %>% group_by(day_of_week, rideable_type, month, member_casual) %>% summarise(num_of_ride = n())
+
+head(user_day_typ_mon_num)
+
+  # plot
+ggplot(user_day_typ_mon_num) + geom_col(aes(day_of_week, num_of_ride, fill = member_casual)) + facet_grid(~rideable_type~month) + labs (title = "Using Times on Each Day and in Rideable Types and Twelve Months", x = "day", y ="Using times") + theme(legend.position="bottom") + theme(legend.position="bottom", axis.ticks = element_blank(), axis.text.y = element_blank())
+
+
+
